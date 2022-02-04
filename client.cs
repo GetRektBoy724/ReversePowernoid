@@ -139,7 +139,7 @@ public class Patch4MS1And3TW {
         }
     }
 
-    public static void Main() {
+    public static void Run() {
         Patch4MS1();
         Patch3TW();
     }
@@ -565,7 +565,7 @@ public class ReversePowerNoid
             //Console.WriteLine("   [-] It seems that we failed to disable ETW :')");
             return false;
         }
-        Patch4MS1And3TW.Main();
+        Patch4MS1And3TW.Run();
         return true;
     }
 
